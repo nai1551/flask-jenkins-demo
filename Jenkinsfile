@@ -1,6 +1,8 @@
 pipeline {
 
-    agent any
+    agent {
+        label 'jenkins-agent-102'
+    }
 
     options {
         skipDefaultCheckout(true)
@@ -10,7 +12,7 @@ pipeline {
 
         stage('Checkout') {
             steps {
-                echo 'Checking out flask-jenkins-demo...'
+                echo '===== Checking out Flask project ====='
                 checkout scm
             }
         }
@@ -43,9 +45,10 @@ pipeline {
                     echo "===== Pip inside venv ====="
                     pip --version
 
-                    echo "===== Installing Dependencies ====="
+                    echo "===== Upgrading pip ====="
                     pip install --upgrade pip
 
+                    echo "===== Installing Project Dependencies ====="
                     pip install -r requirements.txt
 
                     echo "===== Installing Pytest ====="
@@ -81,22 +84,24 @@ pipeline {
         stage('Deploy Application') {
             steps {
                 sh '''
-                    . venv/bin/activate
+                    echo "===== Deploying Flask Application ====="
 
-                    echo "===== Starting Flask Application ====="
+                    sudo systemctl restart flask-app
 
-                    pkill -f "python app.py" || true
+                    echo "===== Checking Flask Service ====="
 
-                    nohup python app.py > flask.log 2>&1 &
+                    sudo systemctl is-active flask-app
 
-                    sleep 5
+                    echo "===== Waiting for Application ====="
 
-                    echo "===== Flask Log ====="
-                    cat flask.log
+                    sleep 3
 
                     echo "===== Health Check ====="
 
-                    curl http://localhost:5000/health
+                    curl -f http://localhost:5000/health
+
+                    echo ""
+                    echo "===== Deployment Successful ====="
                 '''
             }
         }
@@ -104,14 +109,17 @@ pipeline {
         stage('Show Application') {
             steps {
                 sh '''
-                    echo "===================================="
+                    echo "========================================"
                     echo "Flask Application is Running"
-                    echo "===================================="
+                    echo "========================================"
 
-                    echo "Server IP:"
+                    echo "Worker Hostname:"
+                    hostname
+
+                    echo "Worker IP:"
                     hostname -I
 
-                    echo "Port:"
+                    echo "Application Port:"
                     echo "5000"
 
                     echo "Application URL:"
@@ -127,17 +135,21 @@ pipeline {
     post {
 
         success {
-            echo '===================================='
-            echo 'PIPELINE SUCCESSFUL!'
-            echo 'Flask application deployed.'
-            echo '===================================='
+            echo '''
+========================================
+PIPELINE SUCCESSFUL!
+Flask application deployed successfully.
+========================================
+'''
         }
 
         failure {
-            echo '===================================='
-            echo 'PIPELINE FAILED!'
-            echo 'Check the failed stage.'
-            echo '===================================='
+            echo '''
+========================================
+PIPELINE FAILED!
+Check the failed stage.
+========================================
+'''
         }
     }
 }

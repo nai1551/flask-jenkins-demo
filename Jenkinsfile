@@ -1,8 +1,6 @@
 pipeline {
 
-    agent {
-        label 'jenkins-agent-102'
-    }
+    agent any
 
     options {
         skipDefaultCheckout(true)
